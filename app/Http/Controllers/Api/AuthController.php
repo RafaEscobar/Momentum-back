@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\LoginRequest;
+use App\Http\Requests\Api\LogoutAllRequest;
 use App\Http\Requests\Api\RegisterRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +22,7 @@ class AuthController extends Controller
             'password',
         ]));
 
-        return $this->tokenResponse($user, 201);
+        return $this->tokenResponse($user, $request->validated('device_name', 'Momentum client'), 201);
     }
 
     public function login(LoginRequest $request): JsonResponse
@@ -34,12 +35,19 @@ class AuthController extends Controller
             ]);
         }
 
-        return $this->tokenResponse($user);
+        return $this->tokenResponse($user, $request->validated('device_name', 'Momentum client'));
     }
 
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()?->delete();
+
+        return response()->json(status: 204);
+    }
+
+    public function logoutAll(LogoutAllRequest $request): JsonResponse
+    {
+        $request->user()->tokens()->delete();
 
         return response()->json(status: 204);
     }
@@ -51,11 +59,11 @@ class AuthController extends Controller
         ]);
     }
 
-    private function tokenResponse(User $user, int $status = 200): JsonResponse
+    private function tokenResponse(User $user, string $deviceName, int $status = 200): JsonResponse
     {
         return response()->json([
             'user' => $user->only(['id', 'name', 'email']),
-            'token' => $user->createToken('api-token')->plainTextToken,
+            'token' => $user->createToken($deviceName)->plainTextToken,
         ], $status);
     }
 }

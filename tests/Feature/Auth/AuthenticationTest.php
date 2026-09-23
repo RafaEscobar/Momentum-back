@@ -9,6 +9,7 @@ it('registers a user and returns a token', function () {
         'email' => 'rafa@example.com',
         'password' => 'secure-password',
         'password_confirmation' => 'secure-password',
+        'device_name' => 'Registration browser',
     ]);
 
     $response
@@ -21,7 +22,10 @@ it('registers a user and returns a token', function () {
     $user = User::where('email', 'rafa@example.com')->firstOrFail();
 
     expect(Hash::check('secure-password', $user->password))->toBeTrue();
-    $this->assertDatabaseCount('personal_access_tokens', 1);
+    $this->assertDatabaseHas('personal_access_tokens', [
+        'tokenable_id' => $user->id,
+        'name' => 'Registration browser',
+    ]);
 });
 
 it('returns 422 when registration data is invalid', function () {

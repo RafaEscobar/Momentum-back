@@ -49,6 +49,13 @@ class User extends Authenticatable
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::deleting(function (User $user): void {
+            $user->tokens()->delete();
+        });
+    }
+
     /** @return HasMany<Project, $this> */
     public function projects(): HasMany
     {

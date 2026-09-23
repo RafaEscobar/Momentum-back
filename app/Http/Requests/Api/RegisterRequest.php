@@ -23,6 +23,7 @@ class RegisterRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users', 'email')],
             'password' => ['required', 'string', 'min:8', 'max:255', 'confirmed'],
+            'device_name' => ['sometimes', 'string', 'max:100', 'not_regex:/[\x00-\x1F\x7F]/'],
         ];
     }
 }

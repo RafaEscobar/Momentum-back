@@ -59,6 +59,7 @@ paths:
               properties:
                 email: { type: string, format: email, maxLength: 255 }
                 password: { type: string, maxLength: 255 }
+                device_name: { type: string, maxLength: 100, example: Chrome en laptop }
       responses:
         '200':
           description: Usuario y token personal
@@ -74,6 +75,23 @@ paths:
       responses:
         '204': { description: Token revocado }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+  /logout-all:
+    post:
+      tags: [Authentication]
+      summary: Revocar todos los tokens del usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string, maxLength: 255 }
+      responses:
+        '204': { description: Todos los tokens fueron revocados }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /user:
     get:
       tags: [Authentication]
@@ -856,6 +874,7 @@ components:
         email: { type: string, format: email, maxLength: 255 }
         password: { type: string, minLength: 8, maxLength: 255 }
         password_confirmation: { type: string }
+        device_name: { type: string, maxLength: 100, example: Chrome en laptop }
     AuthResponse:
       type: object
       required: [user, token]

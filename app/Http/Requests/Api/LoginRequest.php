@@ -21,6 +21,7 @@ class LoginRequest extends FormRequest
         return [
             'email' => ['required', 'string', 'email', 'max:255'],
             'password' => ['required', 'string', 'max:255'],
+            'device_name' => ['sometimes', 'string', 'max:100', 'not_regex:/[\x00-\x1F\x7F]/'],
         ];
     }
 }

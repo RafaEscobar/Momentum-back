@@ -27,6 +27,7 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:lo
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/logout-all', [AuthController::class, 'logoutAll']);
     Route::get('/user', [AuthController::class, 'user']);
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/search', SearchController::class)
