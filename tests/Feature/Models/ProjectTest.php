@@ -38,3 +38,20 @@ it('deletes projects when their user is deleted', function () {
 
     $this->assertModelMissing($project);
 });
+
+test('project progress is zero until tasks are implemented', function () {
+    expect((new Project)->progress())->toBe(0);
+});
+
+test('project progress handles empty totals and rounds percentages', function (
+    int $completedStoryPoints,
+    int $totalStoryPoints,
+    int $expectedProgress,
+) {
+    expect(Project::calculateProgress($completedStoryPoints, $totalStoryPoints))
+        ->toBe($expectedProgress);
+})->with([
+    'no story points' => [0, 0, 0],
+    'partially completed' => [5, 8, 63],
+    'fully completed' => [8, 8, 100],
+]);

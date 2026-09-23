@@ -4,7 +4,9 @@ namespace App\Http\Requests\Api;
 
 use App\Enums\ProjectPriority;
 use App\Enums\ProjectStatus;
+use App\Models\Project;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -15,6 +17,8 @@ class StoreProjectRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        Gate::authorize('create', Project::class);
+
         return true;
     }
 

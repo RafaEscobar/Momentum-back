@@ -5,7 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class ProjectSummaryResource extends JsonResource
+class ChecklistItemResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -16,13 +16,10 @@ class ProjectSummaryResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
-            'status' => $this->status->value,
-            'priority' => $this->priority->value,
-            'color' => $this->color,
-            'icon' => $this->icon,
-            'progress' => $this->resource->progress(),
-            'tasks_count' => $this->whenCounted('tasks'),
+            'task_id' => $this->task_id,
+            'title' => $this->title,
+            'is_completed' => $this->is_completed,
+            'position' => $this->position,
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

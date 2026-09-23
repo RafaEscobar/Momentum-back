@@ -54,4 +54,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(Project::class);
     }
+
+    /** @return HasMany<Tag, $this> */
+    public function tags(): HasMany
+    {
+        return $this->hasMany(Tag::class);
+    }
 }

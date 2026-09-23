@@ -4,7 +4,9 @@ namespace App\Models;
 
 use App\Enums\ProjectPriority;
 use App\Enums\ProjectStatus;
+use App\Enums\TaskStatus;
 use Database\Factories\ProjectFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -70,5 +72,44 @@ class Project extends Model
     public function activities(): HasMany
     {
         return $this->hasMany(Activity::class);
+    }
+
+    public function progress(): int
+    {
+        return self::calculateProgress($this->completedStoryPoints(), $this->totalStoryPoints());
+    }
+
+    /** @param Builder<Project> $query */
+    public function scopeWithTaskPointTotals(Builder $query): Builder
+    {
+        return $query
+            ->withSum('tasks as total_story_points', 'story_points')
+            ->withSum([
+                'tasks as completed_story_points' => fn (Builder $query) => $query->where('status', TaskStatus::Done),
+            ], 'story_points');
+    }
+
+    public function freshWithTaskPointTotals(): self
+    {
+        return self::query()->withTaskPointTotals()->findOrFail($this->getKey());
+    }
+
+    public function totalStoryPoints(): int
+    {
+        return (int) ($this->getAttribute('total_story_points') ?? 0);
+    }
+
+    public function completedStoryPoints(): int
+    {
+        return (int) ($this->getAttribute('completed_story_points') ?? 0);
+    }
+
+    public static function calculateProgress(int $completedStoryPoints, int $totalStoryPoints): int
+    {
+        if ($totalStoryPoints <= 0) {
+            return 0;
+        }
+
+        return (int) round(($completedStoryPoints / $totalStoryPoints) * 100);
     }
 }
