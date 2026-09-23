@@ -1,11 +1,17 @@
 <?php
 
+use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BacklogController;
 use App\Http\Controllers\Api\BoardController;
 use App\Http\Controllers\Api\ChecklistItemController;
 use App\Http\Controllers\Api\ChecklistReorderController;
+use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\ProjectNoteController;
+use App\Http\Controllers\Api\ProjectStatsController;
+use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\SprintActionController;
 use App\Http\Controllers\Api\SprintController;
 use App\Http\Controllers\Api\TagController;
@@ -22,8 +28,24 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:lo
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/search', SearchController::class)
+        ->middleware('throttle:search')
+        ->name('search');
+    Route::prefix('meta')->name('meta.')->controller(MetaController::class)->group(function (): void {
+        Route::get('/task-types', 'taskTypes')->name('task-types');
+        Route::get('/task-statuses', 'taskStatuses')->name('task-statuses');
+        Route::get('/priorities', 'priorities')->name('priorities');
+        Route::get('/story-points', 'storyPoints')->name('story-points');
+        Route::get('/project-statuses', 'projectStatuses')->name('project-statuses');
+    });
     Route::apiResource('tags', TagController::class)->except(['show']);
     Route::apiResource('projects', ProjectController::class);
+    Route::get('/projects/{project}/activities', ActivityController::class)
+        ->name('projects.activities.index');
+    Route::apiResource('projects.notes', ProjectNoteController::class)->scoped();
+    Route::get('/projects/{project}/stats', ProjectStatsController::class)
+        ->name('projects.stats');
     Route::get('/projects/{project}/backlog', BacklogController::class)->name('projects.backlog');
     Route::get('/projects/{project}/board', BoardController::class)->name('projects.board');
     Route::patch('/projects/{project}/tasks/reorder', TaskReorderController::class)

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\SprintStatus;
+use App\Enums\UnfinishedTaskAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\IndexSprintRequest;
 use App\Http\Requests\Api\StoreSprintRequest;
@@ -88,6 +89,10 @@ class SprintController extends Controller
 
             if ($status === SprintStatus::Active) {
                 return $this->sprintService->activate($sprint);
+            }
+
+            if ($status === SprintStatus::Completed) {
+                return $this->sprintService->complete($sprint, UnfinishedTaskAction::Backlog)->sprint;
             }
 
             $sprint->update(['status' => $status]);

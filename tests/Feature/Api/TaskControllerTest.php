@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ActivityType;
 use App\Enums\ProjectPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
@@ -26,6 +27,7 @@ it('lists only tasks from the requested project in stable position order', funct
         ->assertJsonCount(2, 'data')
         ->assertJsonPath('data.0.id', $firstTask->id)
         ->assertJsonPath('data.1.id', $laterTask->id)
+        ->assertJsonMissingPath('data.0.description')
         ->assertJsonPath('meta.per_page', 15);
 });
 
@@ -67,6 +69,11 @@ it('creates a task under its project with safe defaults', function () {
         'project_id' => $project->id,
         'title' => 'Build task API',
         'story_points' => 5,
+    ]);
+    $this->assertDatabaseHas('activities', [
+        'project_id' => $project->id,
+        'subject_id' => $response->json('data.id'),
+        'type' => ActivityType::TaskCreated->value,
     ]);
 });
 

@@ -40,7 +40,7 @@ class StoreTaskRequest extends FormRequest
             'type' => ['sometimes', Rule::enum(TaskType::class)],
             'priority' => ['sometimes', Rule::enum(ProjectPriority::class)],
             'status' => ['sometimes', Rule::enum(TaskStatus::class)],
-            'story_points' => ['nullable', 'integer', Rule::in([1, 2, 3, 5, 8, 13])],
+            'story_points' => ['nullable', 'integer', Rule::in(Task::STORY_POINT_OPTIONS)],
             'sprint_id' => ['nullable', 'integer', new SprintBelongsToProject($project)],
             'position' => ['sometimes', 'integer', 'min:0'],
         ];

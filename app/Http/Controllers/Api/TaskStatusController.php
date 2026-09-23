@@ -8,9 +8,13 @@ use App\Http\Requests\Api\UpdateTaskStatusRequest;
 use App\Http\Resources\TaskResource;
 use App\Models\Project;
 use App\Models\Task;
+use App\Services\ActivityService;
+use Illuminate\Support\Facades\DB;
 
 class TaskStatusController extends Controller
 {
+    public function __construct(private readonly ActivityService $activityService) {}
+
     /**
      * Handle the incoming request.
      */
@@ -18,11 +22,20 @@ class TaskStatusController extends Controller
     {
         $status = TaskStatus::from($request->validated('status'));
 
-        $task->update([
-            'status' => $status,
-            'completed_at' => $status === TaskStatus::Done ? ($task->completed_at ?? now()) : null,
-        ]);
+        $task = DB::transaction(function () use ($status, $task): Task {
+            $previousStatus = $task->status;
 
-        return new TaskResource($task->refresh());
+            $task->update([
+                'status' => $status,
+                'completed_at' => $status === TaskStatus::Done ? ($task->completed_at ?? now()) : null,
+            ]);
+
+            $task->refresh();
+            $this->activityService->taskStatusChanged($task, $previousStatus);
+
+            return $task;
+        });
+
+        return new TaskResource($task);
     }
 }

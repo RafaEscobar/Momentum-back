@@ -6,6 +6,7 @@ use App\Enums\ProjectPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
 use App\Models\Project;
+use App\Models\Task;
 use App\Rules\SprintBelongsToProject;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
@@ -39,7 +40,7 @@ class UpdateTaskRequest extends FormRequest
             'type' => ['sometimes', Rule::enum(TaskType::class)],
             'priority' => ['sometimes', Rule::enum(ProjectPriority::class)],
             'status' => ['sometimes', Rule::enum(TaskStatus::class)],
-            'story_points' => ['sometimes', 'nullable', 'integer', Rule::in([1, 2, 3, 5, 8, 13])],
+            'story_points' => ['sometimes', 'nullable', 'integer', Rule::in(Task::STORY_POINT_OPTIONS)],
             'sprint_id' => ['sometimes', 'nullable', 'integer', new SprintBelongsToProject($project)],
             'position' => ['sometimes', 'integer', 'min:0'],
         ];

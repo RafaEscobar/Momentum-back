@@ -6,7 +6,6 @@ use App\Models\Project;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Translation\PotentiallyTranslatedString;
 
 class SprintBelongsToProject implements ValidationRule
@@ -20,7 +19,7 @@ class SprintBelongsToProject implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if (! Schema::hasTable('sprints') || ! DB::table('sprints')
+        if (! DB::table('sprints')
             ->where('id', $value)
             ->where('project_id', $this->project->getKey())
             ->exists()) {

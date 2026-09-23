@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ActivityType;
 use App\Enums\TaskStatus;
 use App\Models\Project;
 use App\Models\Task;
@@ -28,6 +29,14 @@ it('marks a task done and records completed at', function () {
         ->assertJsonPath('data.completed_at', fn (mixed $value): bool => is_string($value));
 
     expect($task->refresh()->completed_at)->not->toBeNull();
+    $this->assertDatabaseHas('activities', [
+        'subject_id' => $task->id,
+        'type' => ActivityType::TaskStatusChanged->value,
+    ]);
+    $this->assertDatabaseHas('activities', [
+        'subject_id' => $task->id,
+        'type' => ActivityType::TaskCompleted->value,
+    ]);
 });
 
 it('clears completed at when a task leaves done', function () {

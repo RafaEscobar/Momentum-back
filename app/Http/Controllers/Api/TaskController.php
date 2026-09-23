@@ -2,19 +2,25 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\TaskStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\IndexTaskRequest;
 use App\Http\Requests\Api\StoreTaskRequest;
 use App\Http\Requests\Api\UpdateTaskRequest;
 use App\Http\Resources\TaskResource;
+use App\Http\Resources\TaskSummaryResource;
 use App\Models\Project;
 use App\Models\Task;
+use App\Services\ActivityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class TaskController extends Controller
 {
+    public function __construct(private readonly ActivityService $activityService) {}
+
     /**
      * Display a listing of the resource.
      */
@@ -28,7 +34,7 @@ class TaskController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return TaskResource::collection($tasks);
+        return TaskSummaryResource::collection($tasks);
     }
 
     /**
@@ -36,7 +42,12 @@ class TaskController extends Controller
      */
     public function store(StoreTaskRequest $request, Project $project): JsonResponse
     {
-        $task = $project->tasks()->create($request->validated())->refresh();
+        $task = DB::transaction(function () use ($request, $project): Task {
+            $task = $project->tasks()->create($request->validated())->refresh();
+            $this->activityService->taskCreated($task);
+
+            return $task;
+        });
 
         return (new TaskResource($task))->response()->setStatusCode(201);
     }
@@ -56,9 +67,25 @@ class TaskController extends Controller
      */
     public function update(UpdateTaskRequest $request, Project $project, Task $task): TaskResource
     {
-        $task->update($request->validated());
+        $task = DB::transaction(function () use ($request, $task): Task {
+            $previousStatus = $task->status;
+            $data = $request->validated();
 
-        return new TaskResource($task->refresh());
+            if (array_key_exists('status', $data)) {
+                $status = TaskStatus::from($data['status']);
+                $data['completed_at'] = $status === TaskStatus::Done
+                    ? ($task->completed_at ?? now())
+                    : null;
+            }
+
+            $task->update($data);
+            $task->refresh();
+            $this->activityService->taskStatusChanged($task, $previousStatus);
+
+            return $task;
+        });
+
+        return new TaskResource($task);
     }
 
     /**

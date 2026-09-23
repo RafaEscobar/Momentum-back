@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Enums\TaskStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ReorderTasksRequest;
-use App\Http\Resources\TaskResource;
+use App\Http\Resources\TaskSummaryResource;
 use App\Models\Project;
 use App\Models\Task;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -51,6 +51,6 @@ class TaskReorderController extends Controller
             });
         });
 
-        return TaskResource::collection($tasks);
+        return TaskSummaryResource::collection($tasks);
     }
 }

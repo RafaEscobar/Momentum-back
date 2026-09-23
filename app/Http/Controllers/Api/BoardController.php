@@ -10,11 +10,9 @@ use App\Http\Resources\BoardTaskResource;
 use App\Http\Resources\SprintSummaryResource;
 use App\Models\Project;
 use App\Models\Sprint;
-use App\Models\Tag;
 use App\Models\Task;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Schema;
 
 class BoardController extends Controller
 {
@@ -39,11 +37,7 @@ class BoardController extends Controller
             ->orderBy('position')
             ->orderBy('id');
 
-        if (class_exists(Tag::class) && Schema::hasTable('tags') && Schema::hasTable('tag_task')) {
-            $query->with('tags');
-        }
-
-        $tasks = $query->get();
+        $tasks = $query->with('tags')->get();
         $columns = collect(TaskStatus::cases())->mapWithKeys(
             fn (TaskStatus $status): array => [
                 $status->value => $tasks
