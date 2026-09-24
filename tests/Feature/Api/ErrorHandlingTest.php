@@ -44,7 +44,10 @@ it('does not expose internal exception details when debug mode is disabled', fun
     config(['app.debug' => false]);
 
     Route::get('/api/testing/server-error', function (): never {
-        throw new RuntimeException('DATABASE_PASSWORD=super-secret');
+        throw new RuntimeException(
+            'DATABASE_PASSWORD=super-secret SQLSTATE[HY000] SELECT * FROM users '.
+            'at /var/www/momentum/app/Secrets.php Authorization: Bearer leaked-token'
+        );
     });
 
     try {
@@ -54,6 +57,10 @@ it('does not expose internal exception details when debug mode is disabled', fun
             ->assertJsonPath('message', 'Server Error')
             ->assertDontSee('DATABASE_PASSWORD', false)
             ->assertDontSee('super-secret', false)
+            ->assertDontSee('SQLSTATE', false)
+            ->assertDontSee('SELECT * FROM users', false)
+            ->assertDontSee('/var/www/momentum', false)
+            ->assertDontSee('leaked-token', false)
             ->assertJsonMissingPath('exception')
             ->assertJsonMissingPath('trace');
     } finally {

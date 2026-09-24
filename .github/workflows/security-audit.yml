@@ -1,0 +1,55 @@
+name: Security audit
+
+on:
+  pull_request:
+    paths:
+      - composer.json
+      - composer.lock
+      - package.json
+      - package-lock.json
+      - .github/workflows/security-audit.yml
+  push:
+    branches: [main]
+    paths:
+      - composer.json
+      - composer.lock
+      - package.json
+      - package-lock.json
+      - .github/workflows/security-audit.yml
+  schedule:
+    - cron: '17 8 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  composer:
+    name: Composer dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+      - run: composer validate --strict --no-interaction
+      - run: composer audit --locked --abandoned=fail --no-interaction
+
+  npm:
+    name: npm dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm audit --package-lock-only --audit-level=high
