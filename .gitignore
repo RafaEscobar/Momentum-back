@@ -1,8 +1,16 @@
 *.log
 .DS_Store
-.env
-.env.backup
-.env.production
+.env*
+!.env.example
+*.bak
+*.backup
+*.dump
+*.key
+*.pem
+*.p12
+*.pfx
+*.sql
+*.sql.gz
 .phpactor.json
 .phpunit.result.cache
 /.fleet
@@ -23,3 +31,4 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 PLAN.md
+PLANSECURITY.md

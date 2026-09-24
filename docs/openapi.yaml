@@ -1,0 +1,1154 @@
+openapi: 3.1.0
+info:
+  title: Momentum API
+  version: 1.0.0
+  description: |
+    API JSON de Momentum. Salvo registro e inicio de sesion, todas las rutas
+    requieren un token de Laravel Sanctum en `Authorization: Bearer <token>`.
+    Los recursos se limitan al usuario autenticado; un recurso ajeno produce
+    `403` o `404` segun el punto de acceso.
+servers:
+  - url: /api
+tags:
+  - name: Authentication
+  - name: Projects
+  - name: Tasks
+  - name: Sprints
+  - name: Board
+  - name: Tags
+  - name: Checklist
+  - name: Notes
+  - name: Dashboard
+  - name: Activity
+  - name: Search
+  - name: Metadata
+security:
+  - bearerAuth: []
+paths:
+  /register:
+    post:
+      tags: [Authentication]
+      summary: Registrar usuario
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+      responses:
+        '201':
+          description: Usuario y token creados
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /login:
+    post:
+      tags: [Authentication]
+      summary: Iniciar sesion
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, maxLength: 255 }
+                password: { type: string, maxLength: 255 }
+                device_name: { type: string, maxLength: 100, example: Chrome en laptop }
+      responses:
+        '200':
+          description: Usuario y token personal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /logout:
+    post:
+      tags: [Authentication]
+      summary: Revocar el token actual
+      responses:
+        '204': { description: Token revocado }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+  /logout-all:
+    post:
+      tags: [Authentication]
+      summary: Revocar todos los tokens del usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string, maxLength: 255 }
+      responses:
+        '204': { description: Todos los tokens fueron revocados }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /user:
+    get:
+      tags: [Authentication]
+      summary: Consultar usuario autenticado
+      responses:
+        '200':
+          description: Usuario actual
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /projects:
+    get:
+      tags: [Projects]
+      summary: Listar proyectos
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/ProjectStatus' } }
+        - { name: priority, in: query, schema: { $ref: '#/components/schemas/Priority' } }
+        - { name: search, in: query, schema: { type: string, maxLength: 255 } }
+      responses:
+        '200': { $ref: '#/components/responses/ProjectPage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Projects]
+      summary: Crear proyecto
+      requestBody:
+        $ref: '#/components/requestBodies/ProjectInput'
+      responses:
+        '201':
+          description: Proyecto creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectEnvelope' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /projects/{project}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Projects]
+      summary: Consultar proyecto
+      responses:
+        '200':
+          description: Detalle del proyecto
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectEnvelope' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Projects]
+      summary: Actualizar proyecto
+      requestBody: { $ref: '#/components/requestBodies/ProjectInput' }
+      responses:
+        '200': { description: Proyecto actualizado, content: { application/json: { schema: { $ref: '#/components/schemas/ProjectEnvelope' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    patch:
+      tags: [Projects]
+      summary: Actualizar proyecto
+      requestBody:
+        $ref: '#/components/requestBodies/ProjectInput'
+      responses:
+        '200':
+          description: Proyecto actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectEnvelope' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Projects]
+      summary: Eliminar proyecto
+      responses:
+        '204': { description: Proyecto eliminado }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /projects/{project}/stats:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Projects]
+      summary: Obtener estadisticas del proyecto
+      responses:
+        '200':
+          description: Progreso, puntos, tareas y sprint activo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectStats' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /projects/{project}/tasks:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Tasks]
+      summary: Listar tareas del proyecto
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/TaskStatus' } }
+        - { name: priority, in: query, schema: { $ref: '#/components/schemas/Priority' } }
+        - { name: type, in: query, schema: { $ref: '#/components/schemas/TaskType' } }
+        - { name: sprint_id, in: query, schema: { type: integer } }
+        - { name: tag_id, in: query, schema: { type: integer } }
+        - { name: search, in: query, schema: { type: string, maxLength: 255 } }
+      responses:
+        '200': { $ref: '#/components/responses/TaskPage' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Tasks]
+      summary: Crear tarea
+      requestBody:
+        $ref: '#/components/requestBodies/TaskInput'
+      responses:
+        '201':
+          description: Tarea creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskEnvelope' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /projects/{project}/tasks/{task}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/TaskId'
+    get:
+      tags: [Tasks]
+      summary: Consultar tarea
+      responses:
+        '200':
+          description: Detalle de la tarea
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskEnvelope' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Tasks]
+      summary: Actualizar tarea
+      requestBody: { $ref: '#/components/requestBodies/TaskInput' }
+      responses:
+        '200': { description: Tarea actualizada, content: { application/json: { schema: { $ref: '#/components/schemas/TaskEnvelope' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    patch:
+      tags: [Tasks]
+      summary: Actualizar tarea
+      requestBody:
+        $ref: '#/components/requestBodies/TaskInput'
+      responses:
+        '200':
+          description: Tarea actualizada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskEnvelope' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Tasks]
+      summary: Eliminar tarea
+      responses:
+        '204': { description: Tarea eliminada }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /projects/{project}/tasks/{task}/status:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/TaskId'
+    patch:
+      tags: [Tasks]
+      summary: Cambiar estado de tarea
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/TaskStatus' }
+      responses:
+        '200':
+          description: Tarea actualizada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskEnvelope' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /projects/{project}/tasks/{task}/sprint:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/TaskId'
+    patch:
+      tags: [Tasks]
+      summary: Asignar tarea a sprint o backlog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sprint_id]
+              properties:
+                sprint_id: { type: [integer, 'null'] }
+      responses:
+        '200':
+          description: Tarea actualizada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskEnvelope' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /projects/{project}/tasks/reorder:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    patch:
+      tags: [Tasks]
+      summary: Reordenar tareas y actualizar sus estados
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tasks]
+              properties:
+                tasks:
+                  type: array
+                  minItems: 1
+                  maxItems: 200
+                  items:
+                    type: object
+                    required: [id, status, position]
+                    properties:
+                      id: { type: integer }
+                      status: { $ref: '#/components/schemas/TaskStatus' }
+                      position: { type: integer, minimum: 0 }
+      responses:
+        '200': { $ref: '#/components/responses/TaskCollection' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /tasks/{task}/tags:
+    parameters:
+      - $ref: '#/components/parameters/TaskId'
+    put:
+      tags: [Tasks, Tags]
+      summary: Sincronizar etiquetas de una tarea
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tag_ids]
+              properties:
+                tag_ids:
+                  type: array
+                  maxItems: 50
+                  uniqueItems: true
+                  items: { type: integer }
+      responses:
+        '200':
+          description: Tarea con etiquetas sincronizadas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskEnvelope' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /projects/{project}/sprints:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Sprints]
+      summary: Listar sprints
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/SprintStatus' } }
+        - { name: search, in: query, schema: { type: string, maxLength: 255 } }
+      responses:
+        '200': { $ref: '#/components/responses/SprintPage' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Sprints]
+      summary: Crear sprint
+      requestBody:
+        $ref: '#/components/requestBodies/SprintInput'
+      responses:
+        '201':
+          description: Sprint creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SprintEnvelope' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /projects/{project}/sprints/{sprint}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/SprintId'
+    get:
+      tags: [Sprints]
+      summary: Consultar sprint
+      responses:
+        '200':
+          description: Detalle del sprint
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SprintEnvelope' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Sprints]
+      summary: Actualizar sprint
+      requestBody: { $ref: '#/components/requestBodies/SprintInput' }
+      responses:
+        '200': { description: Sprint actualizado, content: { application/json: { schema: { $ref: '#/components/schemas/SprintEnvelope' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    patch:
+      tags: [Sprints]
+      summary: Actualizar sprint
+      requestBody:
+        $ref: '#/components/requestBodies/SprintInput'
+      responses:
+        '200':
+          description: Sprint actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SprintEnvelope' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Sprints]
+      summary: Eliminar sprint
+      responses:
+        '204': { description: Sprint eliminado }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /projects/{project}/sprints/{sprint}/start:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/SprintId'
+    post:
+      tags: [Sprints]
+      summary: Iniciar sprint
+      description: Solo puede existir un sprint activo por proyecto.
+      responses:
+        '200':
+          description: Sprint activo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SprintEnvelope' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /projects/{project}/sprints/{sprint}/complete:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/SprintId'
+    post:
+      tags: [Sprints]
+      summary: Completar sprint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [unfinished_action]
+              properties:
+                unfinished_action:
+                  type: string
+                  enum: [backlog, next_sprint]
+                next_sprint_id:
+                  type: integer
+                  description: Obligatorio solo para `next_sprint`; debe pertenecer al mismo proyecto y no estar completado.
+                include_completed_tasks: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Sprint completado, resumen y tareas movidas
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /projects/{project}/board:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Board]
+      summary: Obtener tablero por columnas
+      parameters:
+        - name: sprint_id
+          in: query
+          description: Usa el sprint activo cuando se omite.
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Sprint seleccionado y columnas backlog, todo, in_progress, blocked y done
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Board' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /projects/{project}/backlog:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Board]
+      summary: Listar tareas sin sprint
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - { name: priority, in: query, schema: { $ref: '#/components/schemas/Priority' } }
+        - { name: type, in: query, schema: { $ref: '#/components/schemas/TaskType' } }
+        - { name: search, in: query, schema: { type: string, maxLength: 255 } }
+        - name: tag_ids[]
+          in: query
+          schema: { type: array, maxItems: 50, items: { type: integer } }
+      responses:
+        '200': { $ref: '#/components/responses/TaskPage' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /tags:
+    get:
+      tags: [Tags]
+      summary: Listar etiquetas del usuario
+      responses:
+        '200':
+          description: Etiquetas ordenadas por nombre
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagCollectionEnvelope' }
+    post:
+      tags: [Tags]
+      summary: Crear etiqueta
+      requestBody:
+        $ref: '#/components/requestBodies/TagInput'
+      responses:
+        '201':
+          description: Etiqueta creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagEnvelope' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /tags/{tag}:
+    parameters:
+      - $ref: '#/components/parameters/TagId'
+    put:
+      tags: [Tags]
+      summary: Actualizar etiqueta
+      requestBody: { $ref: '#/components/requestBodies/TagInput' }
+      responses:
+        '200': { description: Etiqueta actualizada, content: { application/json: { schema: { $ref: '#/components/schemas/TagEnvelope' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    patch:
+      tags: [Tags]
+      summary: Actualizar etiqueta
+      requestBody:
+        $ref: '#/components/requestBodies/TagInput'
+      responses:
+        '200':
+          description: Etiqueta actualizada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagEnvelope' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Tags]
+      summary: Eliminar etiqueta
+      responses:
+        '204': { description: Etiqueta eliminada }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /tasks/{task}/checklist:
+    parameters:
+      - $ref: '#/components/parameters/TaskId'
+    post:
+      tags: [Checklist]
+      summary: Crear elemento de checklist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string, maxLength: 255 }
+                position: { type: integer, minimum: 0 }
+      responses:
+        '201':
+          description: Elemento creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChecklistEnvelope' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /tasks/{task}/checklist/{checklistItem}:
+    parameters:
+      - $ref: '#/components/parameters/TaskId'
+      - $ref: '#/components/parameters/ChecklistItemId'
+    patch:
+      tags: [Checklist]
+      summary: Actualizar elemento de checklist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, maxLength: 255 }
+                is_completed: { type: boolean }
+      responses:
+        '200':
+          description: Elemento actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChecklistEnvelope' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Checklist]
+      summary: Eliminar elemento de checklist
+      responses:
+        '204': { description: Elemento eliminado }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /tasks/{task}/checklist/reorder:
+    parameters:
+      - $ref: '#/components/parameters/TaskId'
+    patch:
+      tags: [Checklist]
+      summary: Reordenar checklist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 200
+                  items:
+                    type: object
+                    required: [id, position]
+                    properties:
+                      id: { type: integer }
+                      position: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Elementos reordenados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/ChecklistItem' } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /projects/{project}/notes:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Notes]
+      summary: Listar notas del proyecto
+      description: El listado no incluye el contenido completo.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+      responses:
+        '200': { $ref: '#/components/responses/NotePage' }
+    post:
+      tags: [Notes]
+      summary: Crear nota
+      description: "`content` se almacena como Markdown crudo; el cliente debe escaparlo o sanitizarlo antes de renderizarlo."
+      requestBody:
+        $ref: '#/components/requestBodies/NoteInput'
+      responses:
+        '201':
+          description: Nota creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NoteEnvelope' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /projects/{project}/notes/{note}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/NoteId'
+    get:
+      tags: [Notes]
+      summary: Consultar nota
+      responses:
+        '200':
+          description: Nota con contenido Markdown crudo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NoteEnvelope' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Notes]
+      summary: Actualizar nota
+      requestBody: { $ref: '#/components/requestBodies/NoteInput' }
+      responses:
+        '200': { description: Nota actualizada, content: { application/json: { schema: { $ref: '#/components/schemas/NoteEnvelope' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    patch:
+      tags: [Notes]
+      summary: Actualizar nota
+      requestBody:
+        $ref: '#/components/requestBodies/NoteInput'
+      responses:
+        '200':
+          description: Nota actualizada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NoteEnvelope' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Notes]
+      summary: Eliminar nota
+      responses:
+        '204': { description: Nota eliminada }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Obtener resumen del usuario
+      responses:
+        '200':
+          description: Proyectos activos, sprints, estadisticas y actividad reciente
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+  /projects/{project}/activities:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Activity]
+      summary: Listar actividad del proyecto
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - name: type
+          in: query
+          schema: { $ref: '#/components/schemas/ActivityType' }
+        - { name: date_from, in: query, schema: { type: string, format: date } }
+        - { name: date_to, in: query, schema: { type: string, format: date } }
+      responses:
+        '200': { $ref: '#/components/responses/ActivityPage' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /search:
+    get:
+      tags: [Search]
+      summary: Buscar proyectos, tareas y notas
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 2, maxLength: 100 }
+        - { name: projects_page, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: tasks_page, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: notes_page, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200':
+          description: Hasta 10 resultados por tipo y metadatos de paginacion independientes
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /meta/task-types:
+    get: { tags: [Metadata], summary: Listar tipos de tarea, responses: { '200': { $ref: '#/components/responses/MetadataList' } } }
+  /meta/task-statuses:
+    get: { tags: [Metadata], summary: Listar estados de tarea, responses: { '200': { $ref: '#/components/responses/MetadataList' } } }
+  /meta/priorities:
+    get: { tags: [Metadata], summary: Listar prioridades, responses: { '200': { $ref: '#/components/responses/MetadataList' } } }
+  /meta/story-points:
+    get: { tags: [Metadata], summary: Listar valores de story points, responses: { '200': { $ref: '#/components/responses/MetadataList' } } }
+  /meta/project-statuses:
+    get: { tags: [Metadata], summary: Listar estados de proyecto, responses: { '200': { $ref: '#/components/responses/MetadataList' } } }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum token
+  parameters:
+    Page: { name: page, in: query, schema: { type: integer, minimum: 1 } }
+    ProjectId: { name: project, in: path, required: true, schema: { type: integer } }
+    TaskId: { name: task, in: path, required: true, schema: { type: integer } }
+    SprintId: { name: sprint, in: path, required: true, schema: { type: integer } }
+    TagId: { name: tag, in: path, required: true, schema: { type: integer } }
+    NoteId: { name: note, in: path, required: true, schema: { type: integer } }
+    ChecklistItemId: { name: checklistItem, in: path, required: true, schema: { type: integer } }
+  requestBodies:
+    ProjectInput:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ProjectInput' }
+    TaskInput:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/TaskInput' }
+    SprintInput:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/SprintInput' }
+    TagInput:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/TagInput' }
+    NoteInput:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/NoteInput' }
+  responses:
+    Unauthenticated:
+      description: Token ausente o invalido
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: El usuario no tiene acceso al recurso
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: Recurso inexistente
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    ValidationError:
+      description: Datos invalidos
+      content: { application/json: { schema: { $ref: '#/components/schemas/ValidationError' } } }
+    RateLimited:
+      description: Demasiadas solicitudes
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    ProjectPage:
+      description: Pagina de proyectos (15 por pagina)
+      content: { application/json: { schema: { $ref: '#/components/schemas/ProjectCollectionEnvelope' } } }
+    TaskPage:
+      description: Pagina de tareas (15 por pagina)
+      content: { application/json: { schema: { $ref: '#/components/schemas/TaskCollectionEnvelope' } } }
+    TaskCollection:
+      description: Coleccion de tareas
+      content: { application/json: { schema: { $ref: '#/components/schemas/TaskCollectionEnvelope' } } }
+    SprintPage:
+      description: Pagina de sprints (15 por pagina)
+      content: { application/json: { schema: { $ref: '#/components/schemas/SprintCollectionEnvelope' } } }
+    NotePage:
+      description: Pagina de notas resumidas (15 por pagina)
+      content: { application/json: { schema: { $ref: '#/components/schemas/NoteCollectionEnvelope' } } }
+    ActivityPage:
+      description: Pagina de actividad (15 por pagina)
+      content: { application/json: { schema: { $ref: '#/components/schemas/ActivityCollectionEnvelope' } } }
+    MetadataList:
+      description: Valores disponibles
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+  schemas:
+    ProjectStatus: { type: string, enum: [active, paused, completed, archived] }
+    Priority: { type: string, enum: [low, medium, high, critical] }
+    TaskStatus: { type: string, enum: [backlog, todo, in_progress, blocked, done] }
+    TaskType: { type: string, enum: [story, task, bug, improvement] }
+    SprintStatus: { type: string, enum: [planned, active, completed] }
+    ActivityType:
+      type: string
+      enum: [project_created, project_updated, task_created, task_status_changed, task_completed, sprint_created, sprint_started, sprint_completed]
+    User:
+      type: object
+      required: [id, name, email]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string, format: email }
+    RegisterInput:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties:
+        name: { type: string, maxLength: 255 }
+        email: { type: string, format: email, maxLength: 255 }
+        password: { type: string, minLength: 8, maxLength: 255 }
+        password_confirmation: { type: string }
+        device_name: { type: string, maxLength: 100, example: Chrome en laptop }
+    AuthResponse:
+      type: object
+      required: [user, token]
+      properties:
+        user: { $ref: '#/components/schemas/User' }
+        token: { type: string }
+    ProjectInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 255 }
+        description: { type: [string, 'null'], maxLength: 10000 }
+        status: { $ref: '#/components/schemas/ProjectStatus' }
+        priority: { $ref: '#/components/schemas/Priority' }
+        color: { type: string, pattern: '^#[0-9A-Fa-f]{6}$' }
+        icon: { type: [string, 'null'], maxLength: 50 }
+        start_date: { type: [string, 'null'], format: date }
+        target_date: { type: [string, 'null'], format: date }
+    Project:
+      allOf:
+        - $ref: '#/components/schemas/ProjectInput'
+        - type: object
+          required: [id, name, status, priority, progress]
+          properties:
+            id: { type: integer }
+            progress: { type: number, minimum: 0, maximum: 100 }
+            tasks_count: { type: integer }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+    ProjectSummary:
+      type: object
+      required: [id, name, status, priority, progress]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        status: { $ref: '#/components/schemas/ProjectStatus' }
+        priority: { $ref: '#/components/schemas/Priority' }
+        color: { type: string }
+        icon: { type: [string, 'null'] }
+        progress: { type: number, minimum: 0, maximum: 100 }
+        tasks_count: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    TaskInput:
+      type: object
+      properties:
+        title: { type: string, maxLength: 255 }
+        description: { type: [string, 'null'], maxLength: 10000 }
+        type: { $ref: '#/components/schemas/TaskType' }
+        priority: { $ref: '#/components/schemas/Priority' }
+        status: { $ref: '#/components/schemas/TaskStatus' }
+        story_points: { type: [integer, 'null'], enum: [null, 1, 2, 3, 5, 8, 13] }
+        sprint_id: { type: [integer, 'null'] }
+        position: { type: integer, minimum: 0 }
+    Task:
+      allOf:
+        - $ref: '#/components/schemas/TaskInput'
+        - type: object
+          required: [id, project_id, title, type, priority, status, position]
+          properties:
+            id: { type: integer }
+            project_id: { type: integer }
+            tags: { type: array, items: { $ref: '#/components/schemas/Tag' } }
+            completed_at: { type: [string, 'null'], format: date-time }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+    TaskSummary:
+      type: object
+      required: [id, project_id, title, type, priority, status, position]
+      properties:
+        id: { type: integer }
+        project_id: { type: integer }
+        sprint_id: { type: [integer, 'null'] }
+        title: { type: string }
+        type: { $ref: '#/components/schemas/TaskType' }
+        priority: { $ref: '#/components/schemas/Priority' }
+        status: { $ref: '#/components/schemas/TaskStatus' }
+        story_points: { type: [integer, 'null'] }
+        position: { type: integer }
+        completed_at: { type: [string, 'null'], format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    BoardTask:
+      allOf:
+        - $ref: '#/components/schemas/TaskSummary'
+        - type: object
+          properties:
+            checklist:
+              type: object
+              properties:
+                total: { type: integer }
+                completed: { type: integer }
+            tags: { type: array, items: { $ref: '#/components/schemas/Tag' } }
+    SprintInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 255 }
+        goal: { type: [string, 'null'], maxLength: 10000 }
+        start_date: { type: [string, 'null'], format: date }
+        end_date: { type: [string, 'null'], format: date }
+        status: { $ref: '#/components/schemas/SprintStatus' }
+    Sprint:
+      allOf:
+        - $ref: '#/components/schemas/SprintInput'
+        - type: object
+          required: [id, project_id, name, status]
+          properties:
+            id: { type: integer }
+            project_id: { type: integer }
+            planned_points: { type: integer }
+            completed_points: { type: integer }
+            progress_percentage: { type: number }
+            completed_at: { type: [string, 'null'], format: date-time }
+    SprintSummary:
+      type: object
+      required: [id, project_id, name, status]
+      properties:
+        id: { type: integer }
+        project_id: { type: integer }
+        name: { type: string }
+        start_date: { type: [string, 'null'], format: date }
+        end_date: { type: [string, 'null'], format: date }
+        status: { $ref: '#/components/schemas/SprintStatus' }
+        planned_points: { type: integer }
+        completed_points: { type: integer }
+        progress_percentage: { type: number }
+        completed_at: { type: [string, 'null'], format: date-time }
+    TagInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 50 }
+        color: { type: string, maxLength: 7, pattern: '^#[0-9A-Fa-f]{6}$' }
+    Tag:
+      allOf:
+        - $ref: '#/components/schemas/TagInput'
+        - type: object
+          required: [id, name, color]
+          properties:
+            id: { type: integer }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+    ChecklistItem:
+      type: object
+      required: [id, task_id, title, is_completed, position]
+      properties:
+        id: { type: integer }
+        task_id: { type: integer }
+        title: { type: string }
+        is_completed: { type: boolean }
+        position: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    NoteInput:
+      type: object
+      properties:
+        title: { type: string, maxLength: 255 }
+        content: { type: string, maxLength: 50000, description: "Markdown crudo, no HTML confiable." }
+    Note:
+      allOf:
+        - $ref: '#/components/schemas/NoteInput'
+        - type: object
+          required: [id, project_id, title, content]
+          properties:
+            id: { type: integer }
+            project_id: { type: integer }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+    NoteSummary:
+      type: object
+      required: [id, project_id, title]
+      properties:
+        id: { type: integer }
+        project_id: { type: integer }
+        title: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Activity:
+      type: object
+      required: [id, project_id, type, description, created_at]
+      properties:
+        id: { type: integer }
+        project_id: { type: integer }
+        type: { $ref: '#/components/schemas/ActivityType' }
+        description: { type: string }
+        metadata:
+          type: [object, 'null']
+          additionalProperties: false
+          properties:
+            source: { type: string }
+            from: { type: string }
+            to: { type: string }
+            planned_points: { type: integer }
+            completed_points: { type: integer }
+            completed_tasks: { type: integer }
+            unfinished_tasks: { type: integer }
+            unfinished_action: { type: string, enum: [backlog, next_sprint] }
+            next_sprint_id: { type: [integer, 'null'] }
+        subject: { type: [object, 'null'], additionalProperties: true }
+        created_at: { type: string, format: date-time }
+    Board:
+      type: object
+      required: [sprint, backlog, todo, in_progress, blocked, done]
+      properties:
+        sprint: { anyOf: [{ $ref: '#/components/schemas/Sprint' }, { type: 'null' }] }
+        backlog: { type: array, items: { $ref: '#/components/schemas/BoardTask' } }
+        todo: { type: array, items: { $ref: '#/components/schemas/BoardTask' } }
+        in_progress: { type: array, items: { $ref: '#/components/schemas/BoardTask' } }
+        blocked: { type: array, items: { $ref: '#/components/schemas/BoardTask' } }
+        done: { type: array, items: { $ref: '#/components/schemas/BoardTask' } }
+    ProjectStats:
+      type: object
+      required: [progress, story_points, tasks, active_sprint]
+      properties:
+        progress: { type: number }
+        story_points: { type: object, additionalProperties: { type: integer } }
+        tasks: { type: object, additionalProperties: { type: integer } }
+        active_sprint: { anyOf: [{ $ref: '#/components/schemas/Sprint' }, { type: 'null' }] }
+    PaginationLinks:
+      type: object
+      additionalProperties: true
+    PaginationMeta:
+      type: object
+      additionalProperties: true
+    ProjectEnvelope: { type: object, properties: { data: { $ref: '#/components/schemas/Project' } } }
+    TaskEnvelope: { type: object, properties: { data: { $ref: '#/components/schemas/Task' } } }
+    SprintEnvelope: { type: object, properties: { data: { $ref: '#/components/schemas/Sprint' } } }
+    TagEnvelope: { type: object, properties: { data: { $ref: '#/components/schemas/Tag' } } }
+    ChecklistEnvelope: { type: object, properties: { data: { $ref: '#/components/schemas/ChecklistItem' } } }
+    NoteEnvelope: { type: object, properties: { data: { $ref: '#/components/schemas/Note' } } }
+    ProjectCollectionEnvelope:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/ProjectSummary' } }
+        links: { $ref: '#/components/schemas/PaginationLinks' }
+        meta: { $ref: '#/components/schemas/PaginationMeta' }
+    TaskCollectionEnvelope:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/TaskSummary' } }
+        links: { $ref: '#/components/schemas/PaginationLinks' }
+        meta: { $ref: '#/components/schemas/PaginationMeta' }
+    SprintCollectionEnvelope:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/SprintSummary' } }
+        links: { $ref: '#/components/schemas/PaginationLinks' }
+        meta: { $ref: '#/components/schemas/PaginationMeta' }
+    TagCollectionEnvelope:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Tag' } }
+    NoteCollectionEnvelope:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/NoteSummary' } }
+        links: { $ref: '#/components/schemas/PaginationLinks' }
+        meta: { $ref: '#/components/schemas/PaginationMeta' }
+    ActivityCollectionEnvelope:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Activity' } }
+        links: { $ref: '#/components/schemas/PaginationLinks' }
+        meta: { $ref: '#/components/schemas/PaginationMeta' }
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+    ValidationError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            errors:
+              type: object
+              additionalProperties:
+                type: array
+                items: { type: string }
