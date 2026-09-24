@@ -40,10 +40,11 @@ class IndexTaskRequest extends FormRequest
             'status' => ['sometimes', Rule::enum(TaskStatus::class)],
             'priority' => ['sometimes', Rule::enum(ProjectPriority::class)],
             'type' => ['sometimes', Rule::enum(TaskType::class)],
-            'sprint_id' => ['sometimes', 'integer', new SprintBelongsToProject($project)],
+            'sprint_id' => ['sometimes', 'integer', 'min:1', new SprintBelongsToProject($project)],
             'tag_id' => [
                 'sometimes',
                 'integer',
+                'min:1',
                 Rule::exists(Tag::class, 'id')->where(
                     fn (Builder $query) => $query->where('user_id', $this->user()->getKey())
                 ),

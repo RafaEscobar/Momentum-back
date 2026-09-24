@@ -9,6 +9,7 @@ use App\Http\Requests\Api\UpdateProjectRequest;
 use App\Http\Resources\ProjectResource;
 use App\Http\Resources\ProjectSummaryResource;
 use App\Models\Project;
+use App\Support\SqlLikePattern;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
@@ -22,7 +23,11 @@ class ProjectController extends Controller
             ->withTaskPointTotals()
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
             ->when($filters['priority'] ?? null, fn ($query, string $priority) => $query->where('priority', $priority))
-            ->when($filters['search'] ?? null, fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))
+            ->when($filters['search'] ?? null, fn ($query, string $search) => $query->where(
+                'name',
+                'like',
+                SqlLikePattern::contains($search),
+            ))
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate(15)

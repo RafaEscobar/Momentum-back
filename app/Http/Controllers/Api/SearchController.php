@@ -9,6 +9,7 @@ use App\Http\Resources\ProjectSummaryResource;
 use App\Http\Resources\TaskSummaryResource;
 use App\Models\ProjectNote;
 use App\Models\Task;
+use App\Support\SqlLikePattern;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -23,8 +24,7 @@ class SearchController extends Controller
     public function __invoke(SearchRequest $request): JsonResponse
     {
         $user = $request->user();
-        $term = addcslashes($request->validated('q'), '\\%_');
-        $pattern = "%{$term}%";
+        $pattern = SqlLikePattern::contains($request->validated('q'));
 
         $projects = $user->projects()
             ->select(['id', 'user_id', 'name', 'status', 'priority', 'color', 'icon', 'created_at', 'updated_at'])

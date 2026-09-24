@@ -25,11 +25,13 @@ use Illuminate\Support\Facades\Route;
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
-Route::middleware('auth:sanctum')->group(function (): void {
+Route::middleware(['auth:sanctum', 'throttle:api'])->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/logout-all', [AuthController::class, 'logoutAll']);
     Route::get('/user', [AuthController::class, 'user']);
-    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/dashboard', DashboardController::class)
+        ->middleware('throttle:expensive-read')
+        ->name('dashboard');
     Route::get('/search', SearchController::class)
         ->middleware('throttle:search')
         ->name('search');
@@ -43,13 +45,18 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::apiResource('tags', TagController::class)->except(['show']);
     Route::apiResource('projects', ProjectController::class);
     Route::get('/projects/{project}/activities', ActivityController::class)
+        ->middleware('throttle:expensive-read')
         ->name('projects.activities.index');
     Route::apiResource('projects.notes', ProjectNoteController::class)->scoped();
     Route::get('/projects/{project}/stats', ProjectStatsController::class)
+        ->middleware('throttle:expensive-read')
         ->name('projects.stats');
     Route::get('/projects/{project}/backlog', BacklogController::class)->name('projects.backlog');
-    Route::get('/projects/{project}/board', BoardController::class)->name('projects.board');
+    Route::get('/projects/{project}/board', BoardController::class)
+        ->middleware('throttle:expensive-read')
+        ->name('projects.board');
     Route::patch('/projects/{project}/tasks/reorder', TaskReorderController::class)
+        ->middleware('throttle:bulk-write')
         ->name('projects.tasks.reorder');
     Route::patch('/projects/{project}/tasks/{task}/sprint', TaskSprintController::class)
         ->scopeBindings()
@@ -65,8 +72,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->scopeBindings()
         ->name('projects.sprints.complete');
     Route::apiResource('projects.sprints', SprintController::class)->scoped();
-    Route::put('/tasks/{task}/tags', TaskTagController::class)->name('tasks.tags.sync');
+    Route::put('/tasks/{task}/tags', TaskTagController::class)
+        ->middleware('throttle:bulk-write')
+        ->name('tasks.tags.sync');
     Route::patch('/tasks/{task}/checklist/reorder', ChecklistReorderController::class)
+        ->middleware('throttle:bulk-write')
         ->name('tasks.checklist.reorder');
     Route::post('/tasks/{task}/checklist', [ChecklistItemController::class, 'store'])
         ->name('tasks.checklist.store');

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\IndexBacklogRequest;
 use App\Http\Resources\TaskSummaryResource;
 use App\Models\Project;
+use App\Support\SqlLikePattern;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -21,7 +22,11 @@ class BacklogController extends Controller
             ->whereNull('sprint_id')
             ->when($filters['priority'] ?? null, fn (Builder $query, string $priority) => $query->where('priority', $priority))
             ->when($filters['type'] ?? null, fn (Builder $query, string $type) => $query->where('type', $type))
-            ->when($filters['search'] ?? null, fn (Builder $query, string $search) => $query->where('title', 'like', "%{$search}%"));
+            ->when($filters['search'] ?? null, fn (Builder $query, string $search) => $query->where(
+                'title',
+                'like',
+                SqlLikePattern::contains($search),
+            ));
 
         if ($filters['tag_ids'] ?? null) {
             $query->whereExists(function ($tagQuery) use ($filters): void {

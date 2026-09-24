@@ -31,6 +31,7 @@ class SyncTaskTagsRequest extends FormRequest
             'tag_ids' => ['present', 'array', 'max:50'],
             'tag_ids.*' => [
                 'integer',
+                'min:1',
                 'distinct:strict',
                 Rule::exists(Tag::class, 'id')->where(
                     fn (Builder $query) => $query->where('user_id', $this->user()->getKey())

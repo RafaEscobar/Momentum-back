@@ -903,6 +903,20 @@ components:
             tasks_count: { type: integer }
             created_at: { type: string, format: date-time }
             updated_at: { type: string, format: date-time }
+    ProjectSummary:
+      type: object
+      required: [id, name, status, priority, progress]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        status: { $ref: '#/components/schemas/ProjectStatus' }
+        priority: { $ref: '#/components/schemas/Priority' }
+        color: { type: string }
+        icon: { type: [string, 'null'] }
+        progress: { type: number, minimum: 0, maximum: 100 }
+        tasks_count: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
     TaskInput:
       type: object
       properties:
@@ -926,6 +940,33 @@ components:
             completed_at: { type: [string, 'null'], format: date-time }
             created_at: { type: string, format: date-time }
             updated_at: { type: string, format: date-time }
+    TaskSummary:
+      type: object
+      required: [id, project_id, title, type, priority, status, position]
+      properties:
+        id: { type: integer }
+        project_id: { type: integer }
+        sprint_id: { type: [integer, 'null'] }
+        title: { type: string }
+        type: { $ref: '#/components/schemas/TaskType' }
+        priority: { $ref: '#/components/schemas/Priority' }
+        status: { $ref: '#/components/schemas/TaskStatus' }
+        story_points: { type: [integer, 'null'] }
+        position: { type: integer }
+        completed_at: { type: [string, 'null'], format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    BoardTask:
+      allOf:
+        - $ref: '#/components/schemas/TaskSummary'
+        - type: object
+          properties:
+            checklist:
+              type: object
+              properties:
+                total: { type: integer }
+                completed: { type: integer }
+            tags: { type: array, items: { $ref: '#/components/schemas/Tag' } }
     SprintInput:
       type: object
       properties:
@@ -946,10 +987,24 @@ components:
             completed_points: { type: integer }
             progress_percentage: { type: number }
             completed_at: { type: [string, 'null'], format: date-time }
+    SprintSummary:
+      type: object
+      required: [id, project_id, name, status]
+      properties:
+        id: { type: integer }
+        project_id: { type: integer }
+        name: { type: string }
+        start_date: { type: [string, 'null'], format: date }
+        end_date: { type: [string, 'null'], format: date }
+        status: { $ref: '#/components/schemas/SprintStatus' }
+        planned_points: { type: integer }
+        completed_points: { type: integer }
+        progress_percentage: { type: number }
+        completed_at: { type: [string, 'null'], format: date-time }
     TagInput:
       type: object
       properties:
-        name: { type: string, maxLength: 255 }
+        name: { type: string, maxLength: 50 }
         color: { type: string, maxLength: 7, pattern: '^#[0-9A-Fa-f]{6}$' }
     Tag:
       allOf:
@@ -986,6 +1041,15 @@ components:
             project_id: { type: integer }
             created_at: { type: string, format: date-time }
             updated_at: { type: string, format: date-time }
+    NoteSummary:
+      type: object
+      required: [id, project_id, title]
+      properties:
+        id: { type: integer }
+        project_id: { type: integer }
+        title: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
     Activity:
       type: object
       required: [id, project_id, type, description, created_at]
@@ -994,7 +1058,19 @@ components:
         project_id: { type: integer }
         type: { $ref: '#/components/schemas/ActivityType' }
         description: { type: string }
-        metadata: { type: [object, 'null'] }
+        metadata:
+          type: [object, 'null']
+          additionalProperties: false
+          properties:
+            source: { type: string }
+            from: { type: string }
+            to: { type: string }
+            planned_points: { type: integer }
+            completed_points: { type: integer }
+            completed_tasks: { type: integer }
+            unfinished_tasks: { type: integer }
+            unfinished_action: { type: string, enum: [backlog, next_sprint] }
+            next_sprint_id: { type: [integer, 'null'] }
         subject: { type: [object, 'null'], additionalProperties: true }
         created_at: { type: string, format: date-time }
     Board:
@@ -1002,11 +1078,11 @@ components:
       required: [sprint, backlog, todo, in_progress, blocked, done]
       properties:
         sprint: { anyOf: [{ $ref: '#/components/schemas/Sprint' }, { type: 'null' }] }
-        backlog: { type: array, items: { $ref: '#/components/schemas/Task' } }
-        todo: { type: array, items: { $ref: '#/components/schemas/Task' } }
-        in_progress: { type: array, items: { $ref: '#/components/schemas/Task' } }
-        blocked: { type: array, items: { $ref: '#/components/schemas/Task' } }
-        done: { type: array, items: { $ref: '#/components/schemas/Task' } }
+        backlog: { type: array, items: { $ref: '#/components/schemas/BoardTask' } }
+        todo: { type: array, items: { $ref: '#/components/schemas/BoardTask' } }
+        in_progress: { type: array, items: { $ref: '#/components/schemas/BoardTask' } }
+        blocked: { type: array, items: { $ref: '#/components/schemas/BoardTask' } }
+        done: { type: array, items: { $ref: '#/components/schemas/BoardTask' } }
     ProjectStats:
       type: object
       required: [progress, story_points, tasks, active_sprint]
@@ -1030,19 +1106,19 @@ components:
     ProjectCollectionEnvelope:
       type: object
       properties:
-        data: { type: array, items: { $ref: '#/components/schemas/Project' } }
+        data: { type: array, items: { $ref: '#/components/schemas/ProjectSummary' } }
         links: { $ref: '#/components/schemas/PaginationLinks' }
         meta: { $ref: '#/components/schemas/PaginationMeta' }
     TaskCollectionEnvelope:
       type: object
       properties:
-        data: { type: array, items: { $ref: '#/components/schemas/Task' } }
+        data: { type: array, items: { $ref: '#/components/schemas/TaskSummary' } }
         links: { $ref: '#/components/schemas/PaginationLinks' }
         meta: { $ref: '#/components/schemas/PaginationMeta' }
     SprintCollectionEnvelope:
       type: object
       properties:
-        data: { type: array, items: { $ref: '#/components/schemas/Sprint' } }
+        data: { type: array, items: { $ref: '#/components/schemas/SprintSummary' } }
         links: { $ref: '#/components/schemas/PaginationLinks' }
         meta: { $ref: '#/components/schemas/PaginationMeta' }
     TagCollectionEnvelope:
@@ -1052,7 +1128,7 @@ components:
     NoteCollectionEnvelope:
       type: object
       properties:
-        data: { type: array, items: { $ref: '#/components/schemas/Note' } }
+        data: { type: array, items: { $ref: '#/components/schemas/NoteSummary' } }
         links: { $ref: '#/components/schemas/PaginationLinks' }
         meta: { $ref: '#/components/schemas/PaginationMeta' }
     ActivityCollectionEnvelope:

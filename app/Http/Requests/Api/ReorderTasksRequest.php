@@ -29,9 +29,10 @@ class ReorderTasksRequest extends FormRequest
     {
         return [
             'tasks' => ['required', 'array', 'min:1', 'max:200'],
-            'tasks.*.id' => ['required', 'integer', 'distinct:strict'],
+            'tasks.*' => ['array:id,status,position'],
+            'tasks.*.id' => ['required', 'integer', 'min:1', 'distinct:strict'],
             'tasks.*.status' => ['required', Rule::enum(TaskStatus::class)],
-            'tasks.*.position' => ['required', 'integer', 'min:0'],
+            'tasks.*.position' => ['required', 'integer', 'min:0', 'max:4294967295'],
         ];
     }
 }

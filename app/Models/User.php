@@ -34,6 +34,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'tokens',
     ];
 
     /**
@@ -53,6 +54,7 @@ class User extends Authenticatable
     {
         static::deleting(function (User $user): void {
             $user->tokens()->delete();
+            $user->projects()->eachById(fn (Project $project) => $project->delete());
         });
     }
 

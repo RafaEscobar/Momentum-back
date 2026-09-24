@@ -30,7 +30,7 @@ class UpdateTaskSprintRequest extends FormRequest
         $project = $this->route('project');
 
         return [
-            'sprint_id' => ['present', 'nullable', 'integer', new SprintBelongsToProject($project)],
+            'sprint_id' => ['present', 'nullable', 'integer', 'min:1', new SprintBelongsToProject($project)],
         ];
     }
 }

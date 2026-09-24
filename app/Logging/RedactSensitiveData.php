@@ -21,6 +21,15 @@ class RedactSensitiveData
         'api_key',
         'secret',
         'db_password',
+        'email',
+        'name',
+        'title',
+        'description',
+        'content',
+        'search',
+        'q',
+        'device_name',
+        'user_agent',
     ];
 
     public function __invoke(Logger $logger): void

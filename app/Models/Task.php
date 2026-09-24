@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ProjectPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TaskType;
+use App\Support\SqlLikePattern;
 use Database\Factories\TaskFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -124,8 +125,10 @@ class Task extends Model
     public function scopeSearch(Builder $query, string $search): Builder
     {
         return $query->where(function (Builder $query) use ($search): void {
-            $query->where('title', 'like', "%{$search}%")
-                ->orWhere('description', 'like', "%{$search}%");
+            $pattern = SqlLikePattern::contains($search);
+
+            $query->where('title', 'like', $pattern)
+                ->orWhere('description', 'like', $pattern);
         });
     }
 }

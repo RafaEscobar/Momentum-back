@@ -27,6 +27,7 @@ class TaskReorderController extends Controller
             $taskIds = collect($taskUpdates)->pluck('id');
             $tasksById = $project->tasks()
                 ->whereKey($taskIds)
+                ->orderBy('id')
                 ->lockForUpdate()
                 ->get()
                 ->keyBy(fn (Task $task): int => $task->getKey());
@@ -49,7 +50,7 @@ class TaskReorderController extends Controller
 
                 return $task->refresh();
             });
-        });
+        }, attempts: 3);
 
         return TaskSummaryResource::collection($tasks);
     }

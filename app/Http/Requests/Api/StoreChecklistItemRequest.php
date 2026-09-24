@@ -26,7 +26,7 @@ class StoreChecklistItemRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:255'],
-            'position' => ['sometimes', 'integer', 'min:0'],
+            'position' => ['sometimes', 'integer', 'min:0', 'max:4294967295'],
         ];
     }
 }

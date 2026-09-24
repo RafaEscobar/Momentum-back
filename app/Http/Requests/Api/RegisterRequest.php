@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class RegisterRequest extends FormRequest
@@ -25,5 +26,14 @@ class RegisterRequest extends FormRequest
             'password' => ['required', 'string', 'min:8', 'max:255', 'confirmed'],
             'device_name' => ['sometimes', 'string', 'max:100', 'not_regex:/[\x00-\x1F\x7F]/'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('email')) {
+            $this->merge([
+                'email' => Str::lower(trim($this->string('email')->toString())),
+            ]);
+        }
     }
 }

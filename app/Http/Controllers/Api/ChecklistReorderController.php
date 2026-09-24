@@ -26,6 +26,7 @@ class ChecklistReorderController extends Controller
             $itemIds = collect($itemUpdates)->pluck('id');
             $itemsById = $task->checklistItems()
                 ->whereKey($itemIds)
+                ->orderBy('id')
                 ->lockForUpdate()
                 ->get()
                 ->keyBy(fn (ChecklistItem $item): int => $item->getKey());
@@ -42,7 +43,7 @@ class ChecklistReorderController extends Controller
 
                 return $item->refresh();
             });
-        });
+        }, attempts: 3);
 
         return ChecklistItemResource::collection($items);
     }

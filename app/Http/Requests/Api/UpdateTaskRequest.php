@@ -41,8 +41,8 @@ class UpdateTaskRequest extends FormRequest
             'priority' => ['sometimes', Rule::enum(ProjectPriority::class)],
             'status' => ['sometimes', Rule::enum(TaskStatus::class)],
             'story_points' => ['sometimes', 'nullable', 'integer', Rule::in(Task::STORY_POINT_OPTIONS)],
-            'sprint_id' => ['sometimes', 'nullable', 'integer', new SprintBelongsToProject($project)],
-            'position' => ['sometimes', 'integer', 'min:0'],
+            'sprint_id' => ['sometimes', 'nullable', 'integer', 'min:1', new SprintBelongsToProject($project)],
+            'position' => ['sometimes', 'integer', 'min:0', 'max:4294967295'],
         ];
     }
 }

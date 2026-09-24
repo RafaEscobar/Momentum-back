@@ -43,8 +43,28 @@ it('limits the encoded metadata size', function () {
         subject: null,
         type: ActivityType::ProjectUpdated,
         description: 'Project updated',
-        metadata: ['value' => str_repeat('a', 2048)],
+        metadata: ['source' => str_repeat('a', 2048)],
     ))->toThrow(InvalidArgumentException::class);
+});
+
+it('rejects unsupported metadata keys and nested values', function () {
+    $project = Project::factory()->create();
+    $service = app(ActivityService::class);
+
+    expect(fn () => $service->log(
+        project: $project,
+        subject: null,
+        type: ActivityType::ProjectUpdated,
+        description: 'Project updated',
+        metadata: ['email' => 'private@example.test'],
+    ))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => $service->log(
+            project: $project,
+            subject: null,
+            type: ActivityType::ProjectUpdated,
+            description: 'Project updated',
+            metadata: ['source' => ['api']],
+        ))->toThrow(InvalidArgumentException::class);
 });
 
 it('rejects a subject from another project', function () {

@@ -40,6 +40,12 @@ class SecurityProductionCheck extends Command
             'Trusted proxies do not use a wildcard' => ! in_array('*', config('trustedproxy.proxies', []), true),
             'Sanctum tokens have a finite lifetime' => is_int(config('sanctum.expiration'))
                 && config('sanctum.expiration') > 0,
+            'Application request body limit is enabled' => is_int(config('security.max_request_body_kb'))
+                && config('security.max_request_body_kb') > 0,
+            'Pagination has a finite upper bound' => is_int(config('security.max_page'))
+                && config('security.max_page') > 0,
+            'Activity retention is finite' => is_int(config('security.activity_retention_days'))
+                && config('security.activity_retention_days') > 0,
             'Database user is not a default administrator' => ! in_array(
                 strtolower((string) config('database.connections.'.config('database.default').'.username')),
                 ['', 'root', 'admin', 'administrator'],

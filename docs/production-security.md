@@ -94,3 +94,67 @@ curl -I https://api.example.com/storage/logs/laravel.log
 
 La primera solicitud debe redirigir a HTTPS sin aceptar credenciales. Las otras
 deben responder `404`. Repetir las pruebas de CORS con el dominio frontend real.
+
+## Limites de solicitudes y tiempos
+
+- Mantener `MAX_REQUEST_BODY_KB=1024` o un valor menor compatible con los
+  payloads reales. Laravel lo aplica como segunda capa y responde `413`.
+- Aplicar el mismo limite en el proxy para rechazar el cuerpo antes de enviarlo
+  a PHP. En Nginx: `client_max_body_size 1m`.
+- Limitar el tiempo de recepcion del cuerpo y de respuesta del upstream. Un
+  punto de partida para Nginx es `client_body_timeout 10s`,
+  `fastcgi_read_timeout 30s` o `proxy_read_timeout 30s`, segun la topologia.
+- Mantener `max_execution_time=30` en PHP-FPM y alinear los timeouts del
+  balanceador para que ninguna capa espere indefinidamente.
+- Ajustar estos valores con mediciones de staging; no elevarlos para ocultar
+  consultas lentas. Dashboard, board, stats y activity tienen una cuota menor,
+  y los reordenamientos y sincronizacion de tags usan una cuota de escritura
+  masiva independiente.
+
+## Markdown, XSS y CSP
+
+- La API almacena Markdown crudo como texto. Nunca debe considerarse HTML
+  confiable ni insertarse directamente mediante `innerHTML` o equivalentes.
+- El frontend debe renderizar notas y descripciones exclusivamente mediante
+  `resources/js/security/renderMarkdown.js`, que deshabilita HTML crudo y
+  sanitiza el resultado con DOMPurify antes de entregarlo a React.
+- La aplicacion Laravel emite una CSP restrictiva. Si React se despliega en un
+  host separado, ese host debe emitir una politica equivalente; una cabecera de
+  la API no protege documentos cargados desde otro dominio.
+- Produccion no habilita `unsafe-inline` ni `unsafe-eval`. Mantener scripts y
+  estilos en el bundle de Vite y ajustar dominios de `connect-src` de forma
+  explicita si el frontend y la API usan origenes distintos.
+
+## Concurrencia y reintentos
+
+- Iniciar o activar un sprint serializa por proyecto. La base de datos tambien
+  impide que dos sprints del mismo proyecto queden activos.
+- Completar un sprint bloquea el sprint y sus tareas. Un segundo intento recibe
+  `422` porque el sprint ya no esta activo; no crea otra actividad ni vuelve a
+  mover tareas.
+- Reorder de tareas y checklist es idempotente para el mismo payload. Las filas
+  se bloquean en orden estable y los deadlocks se reintentan hasta tres veces.
+  Si dos ordenes validas compiten, gana la ultima transaccion confirmada.
+- Sincronizar las mismas etiquetas repetidamente es idempotente.
+- Repetir una eliminacion devuelve `404` despues de que la primera solicitud
+  elimina el recurso. El cliente debe tratar ese resultado como estado final
+  cuando este reconciliando una operacion previamente enviada.
+
+## Retencion y eliminacion de datos
+
+- Los tokens revocados o expirados se purgan diariamente; la expiracion
+  configurada sigue siendo de siete dias y la poda conserva 24 horas de margen.
+- La actividad se conserva `ACTIVITY_RETENTION_DAYS` dias (365 por defecto) y
+  `model:prune` la elimina diariamente. No debe usarse como auditoria permanente.
+- Proyectos, tareas, sprints, notas y checklist se conservan mientras exista su
+  recurso padre. Una eliminacion solicitada por el usuario es permanente y las
+  relaciones dependientes se eliminan por constraints de base de datos.
+- Las notas se eliminan al borrar la nota, el proyecto o la cuenta. No existe
+  papelera ni recuperacion en el MVP; respaldos siguen su propia retencion y no
+  deben utilizarse como historial consultable.
+- Al eliminar una cuenta deben borrarse tokens, proyectos, tareas, sprints,
+  notas, etiquetas, actividad y pivotes asociados. Hasta exponer esa accion en
+  la API, la solicitud se ejecuta como operacion administrativa verificada.
+- Los logs no deben recibir payloads completos. El procesador de redaccion
+  oculta secretos, correo y campos de contenido si llegan al contexto; IP y
+  usuario solo se registran para eventos de seguridad justificados.

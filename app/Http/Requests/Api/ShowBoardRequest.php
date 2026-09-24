@@ -31,7 +31,7 @@ class ShowBoardRequest extends FormRequest
         $project = $this->route('project');
 
         return [
-            'sprint_id' => ['sometimes', 'integer', new SprintBelongsToProject($project)],
+            'sprint_id' => ['sometimes', 'integer', 'min:1', new SprintBelongsToProject($project)],
         ];
     }
 }

@@ -1,6 +1,9 @@
 <?php
 
+use App\Http\Middleware\AddContentSecurityPolicy;
 use App\Http\Middleware\ForceHttps;
+use App\Http\Middleware\LimitRequestBody;
+use App\Http\Middleware\ValidatePagination;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,7 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(AddContentSecurityPolicy::class);
         $middleware->append(ForceHttps::class);
+        $middleware->append(LimitRequestBody::class);
+        $middleware->append(ValidatePagination::class);
         $middleware->redirectGuestsTo(
             fn (Request $request): ?string => $request->is('api/*') ? null : '/login'
         );

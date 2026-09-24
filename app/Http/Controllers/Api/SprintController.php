@@ -13,6 +13,7 @@ use App\Http\Resources\SprintSummaryResource;
 use App\Models\Project;
 use App\Models\Sprint;
 use App\Services\SprintService;
+use App\Support\SqlLikePattern;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Arr;
@@ -32,7 +33,11 @@ class SprintController extends Controller
         $sprints = $project->sprints()
             ->withPointTotals()
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
-            ->when($filters['search'] ?? null, fn ($query, string $search) => $query->where('name', 'like', "%{$search}%"))
+            ->when($filters['search'] ?? null, fn ($query, string $search) => $query->where(
+                'name',
+                'like',
+                SqlLikePattern::contains($search),
+            ))
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate(15)

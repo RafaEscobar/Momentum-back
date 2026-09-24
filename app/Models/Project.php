@@ -44,6 +44,13 @@ class Project extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::deleting(function (Project $project): void {
+            $project->tasks()->whereNotNull('sprint_id')->update(['sprint_id' => null]);
+        });
+    }
+
     /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {

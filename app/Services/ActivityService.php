@@ -13,6 +13,19 @@ use InvalidArgumentException;
 
 class ActivityService
 {
+    /** @var list<string> */
+    private const ALLOWED_METADATA_KEYS = [
+        'source',
+        'from',
+        'to',
+        'planned_points',
+        'completed_points',
+        'completed_tasks',
+        'unfinished_tasks',
+        'unfinished_action',
+        'next_sprint_id',
+    ];
+
     private const MAX_METADATA_ITEMS = 10;
 
     private const MAX_METADATA_BYTES = 2048;
@@ -117,6 +130,18 @@ class ActivityService
     {
         if (count($metadata) > self::MAX_METADATA_ITEMS) {
             throw new InvalidArgumentException('Activity metadata may contain at most 10 items.');
+        }
+
+        $unsupportedKeys = array_diff(array_keys($metadata), self::ALLOWED_METADATA_KEYS);
+
+        if ($unsupportedKeys !== []) {
+            throw new InvalidArgumentException('Activity metadata contains unsupported keys.');
+        }
+
+        foreach ($metadata as $value) {
+            if (! is_bool($value) && ! is_float($value) && ! is_int($value) && ! is_string($value) && $value !== null) {
+                throw new InvalidArgumentException('Activity metadata values must be scalar or null.');
+            }
         }
 
         $encodedMetadata = json_encode($metadata, JSON_THROW_ON_ERROR);

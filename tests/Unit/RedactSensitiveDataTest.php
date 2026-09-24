@@ -18,7 +18,12 @@ it('redacts sensitive values from log messages and nested context', function () 
             'request' => [
                 'password' => 'super-secret',
                 'password_confirmation' => 'super-secret',
-                'profile' => ['api_token' => $plainToken, 'name' => 'Visible'],
+                'profile' => [
+                    'api_token' => $plainToken,
+                    'name' => 'Personal name',
+                    'email' => 'private@example.test',
+                    'content' => 'Private note body',
+                ],
             ],
             'safe' => 'Visible value',
         ],
@@ -33,6 +38,8 @@ it('redacts sensitive values from log messages and nested context', function () 
         ->and($record->context['request']['password'])->toBe('[REDACTED]')
         ->and($record->context['request']['password_confirmation'])->toBe('[REDACTED]')
         ->and($record->context['request']['profile']['api_token'])->toBe('[REDACTED]')
-        ->and($record->context['request']['profile']['name'])->toBe('Visible')
+        ->and($record->context['request']['profile']['name'])->toBe('[REDACTED]')
+        ->and($record->context['request']['profile']['email'])->toBe('[REDACTED]')
+        ->and($record->context['request']['profile']['content'])->toBe('[REDACTED]')
         ->and($record->context['safe'])->toBe('Visible value');
 });

@@ -41,8 +41,8 @@ class StoreTaskRequest extends FormRequest
             'priority' => ['sometimes', Rule::enum(ProjectPriority::class)],
             'status' => ['sometimes', Rule::enum(TaskStatus::class)],
             'story_points' => ['nullable', 'integer', Rule::in(Task::STORY_POINT_OPTIONS)],
-            'sprint_id' => ['nullable', 'integer', new SprintBelongsToProject($project)],
-            'position' => ['sometimes', 'integer', 'min:0'],
+            'sprint_id' => ['nullable', 'integer', 'min:1', new SprintBelongsToProject($project)],
+            'position' => ['sometimes', 'integer', 'min:0', 'max:4294967295'],
         ];
     }
 }

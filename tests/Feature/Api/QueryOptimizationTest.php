@@ -4,9 +4,11 @@ use App\Enums\ProjectStatus;
 use App\Enums\SprintStatus;
 use App\Models\Activity;
 use App\Models\Project;
+use App\Models\ProjectNote;
 use App\Models\Sprint;
 use App\Models\Tag;
 use App\Models\Task;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 
@@ -39,11 +41,14 @@ it('eager loads board tags and checklist aggregates with a fixed query count', f
 
     DB::flushQueryLog();
     DB::enableQueryLog();
+    $memoryBefore = memory_get_usage(true);
     $this->getJson("/api/projects/{$project->id}/board")->assertOk();
     $queryCount = count(DB::getQueryLog());
+    $memoryIncrease = max(0, memory_get_usage(true) - $memoryBefore);
     DB::disableQueryLog();
 
-    expect($queryCount)->toBeLessThanOrEqual(4);
+    expect($queryCount)->toBeLessThanOrEqual(4)
+        ->and($memoryIncrease)->toBeLessThan(16 * 1024 * 1024);
 });
 
 it('loads dashboard aggregates and polymorphic activity without per-record queries', function () {
@@ -60,9 +65,38 @@ it('loads dashboard aggregates and polymorphic activity without per-record queri
 
     DB::flushQueryLog();
     DB::enableQueryLog();
+    $memoryBefore = memory_get_usage(true);
     $this->getJson('/api/dashboard')->assertOk();
     $queryCount = count(DB::getQueryLog());
+    $memoryIncrease = max(0, memory_get_usage(true) - $memoryBefore);
     DB::disableQueryLog();
 
-    expect($queryCount)->toBeLessThanOrEqual(5);
+    expect($queryCount)->toBeLessThanOrEqual(5)
+        ->and($memoryIncrease)->toBeLessThan(16 * 1024 * 1024);
+});
+
+it('keeps search queries and memory bounded with a larger result set', function () {
+    $user = User::factory()->create();
+    $projects = Project::factory()->for($user)->count(50)->create([
+        'name' => 'Volume needle',
+    ]);
+
+    foreach ($projects as $project) {
+        Task::factory()->for($project)->create(['title' => 'Volume needle']);
+        ProjectNote::factory()->for($project)->create(['title' => 'Volume needle']);
+    }
+
+    Sanctum::actingAs($user, ['*']);
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $memoryBefore = memory_get_usage(true);
+
+    $this->getJson('/api/search?q=needle')->assertOk();
+
+    $queryCount = count(DB::getQueryLog());
+    $memoryIncrease = max(0, memory_get_usage(true) - $memoryBefore);
+    DB::disableQueryLog();
+
+    expect($queryCount)->toBeLessThanOrEqual(9)
+        ->and($memoryIncrease)->toBeLessThan(16 * 1024 * 1024);
 });

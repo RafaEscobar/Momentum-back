@@ -42,6 +42,7 @@ class CompleteSprintRequest extends FormRequest
                 Rule::requiredIf($this->input('unfinished_action') === UnfinishedTaskAction::NextSprint->value),
                 Rule::prohibitedIf($this->input('unfinished_action') !== UnfinishedTaskAction::NextSprint->value),
                 'integer',
+                'min:1',
                 Rule::exists(Sprint::class, 'id')->where(
                     fn (Builder $query) => $query
                         ->where('project_id', $project->getKey())
