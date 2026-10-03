@@ -64,6 +64,12 @@ class User extends Authenticatable
         return $this->hasMany(Project::class);
     }
 
+    /** @return HasMany<GeneralNote, $this> */
+    public function generalNotes(): HasMany
+    {
+        return $this->hasMany(GeneralNote::class);
+    }
+
     /** @return HasMany<Tag, $this> */
     public function tags(): HasMany
     {

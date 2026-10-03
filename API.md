@@ -575,6 +575,22 @@ Body de creacion: `title` requerido, maximo 255; `content` requerido, maximo
 50 000. En actualizacion ambos se pueden omitir, pero deben ser strings no nulos
 cuando se envian.
 
+## Notas generales
+
+Las notas generales pertenecen directamente al usuario y no requieren proyecto.
+El contrato detallado para el frontend se encuentra en `GENERAL_NOTES_API.md`.
+
+| Metodo | Ruta | Resultado |
+|---|---|---|
+| `GET` | `/notes` | Pagina de notas resumidas; acepta `page` y `search` por titulo. |
+| `POST` | `/notes` | Crea una nota general y responde `201`. |
+| `GET` | `/notes/{note}` | Detalle con Markdown crudo. |
+| `PUT/PATCH` | `/notes/{note}` | Actualiza titulo o contenido. |
+| `DELETE` | `/notes/{note}` | `204`. |
+
+Usa los mismos limites de notas de proyecto: titulo maximo 255 y contenido maximo
+50 000. Los listados no incluyen `content`.
+
 ---
 
 # Actividad

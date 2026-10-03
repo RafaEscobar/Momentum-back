@@ -18,6 +18,7 @@ tags:
   - name: Tags
   - name: Checklist
   - name: Notes
+  - name: General Notes
   - name: Dashboard
   - name: Activity
   - name: Search
@@ -710,6 +711,67 @@ paths:
         '204': { description: Nota eliminada }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /notes:
+    get:
+      tags: [General Notes]
+      summary: Listar notas generales del usuario
+      description: El listado no incluye el contenido completo.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - { name: search, in: query, schema: { type: string, maxLength: 255 } }
+      responses:
+        '200': { $ref: '#/components/responses/GeneralNotePage' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [General Notes]
+      summary: Crear nota general
+      description: "`content` se almacena como Markdown crudo; el cliente debe sanitizarlo antes de renderizarlo."
+      requestBody:
+        $ref: '#/components/requestBodies/GeneralNoteInput'
+      responses:
+        '201':
+          description: Nota general creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GeneralNoteEnvelope' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /notes/{note}:
+    parameters:
+      - $ref: '#/components/parameters/GeneralNoteId'
+    get:
+      tags: [General Notes]
+      summary: Consultar nota general
+      responses:
+        '200':
+          description: Nota general con Markdown crudo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GeneralNoteEnvelope' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [General Notes]
+      summary: Actualizar nota general
+      requestBody: { $ref: '#/components/requestBodies/GeneralNoteInput' }
+      responses:
+        '200': { description: Nota actualizada, content: { application/json: { schema: { $ref: '#/components/schemas/GeneralNoteEnvelope' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    patch:
+      tags: [General Notes]
+      summary: Actualizar nota general
+      requestBody: { $ref: '#/components/requestBodies/GeneralNoteInput' }
+      responses:
+        '200': { description: Nota actualizada, content: { application/json: { schema: { $ref: '#/components/schemas/GeneralNoteEnvelope' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [General Notes]
+      summary: Eliminar nota general
+      responses:
+        '204': { description: Nota eliminada }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /dashboard:
     get:
       tags: [Dashboard]
@@ -783,6 +845,7 @@ components:
     TagId: { name: tag, in: path, required: true, schema: { type: integer } }
     NoteId: { name: note, in: path, required: true, schema: { type: integer } }
     ChecklistItemId: { name: checklistItem, in: path, required: true, schema: { type: integer } }
+    GeneralNoteId: { name: note, in: path, required: true, schema: { type: integer } }
   requestBodies:
     ProjectInput:
       required: true
@@ -809,6 +872,11 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/NoteInput' }
+    GeneralNoteInput:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/GeneralNoteInput' }
   responses:
     Unauthenticated:
       description: Token ausente o invalido
@@ -840,6 +908,9 @@ components:
     NotePage:
       description: Pagina de notas resumidas (15 por pagina)
       content: { application/json: { schema: { $ref: '#/components/schemas/NoteCollectionEnvelope' } } }
+    GeneralNotePage:
+      description: Pagina de notas generales resumidas (15 por pagina)
+      content: { application/json: { schema: { $ref: '#/components/schemas/GeneralNoteCollectionEnvelope' } } }
     ActivityPage:
       description: Pagina de actividad (15 por pagina)
       content: { application/json: { schema: { $ref: '#/components/schemas/ActivityCollectionEnvelope' } } }
@@ -1050,6 +1121,28 @@ components:
         title: { type: string }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+    GeneralNoteInput:
+      type: object
+      properties:
+        title: { type: string, maxLength: 255 }
+        content: { type: string, maxLength: 50000, description: "Markdown crudo, no HTML confiable." }
+    GeneralNote:
+      allOf:
+        - $ref: '#/components/schemas/GeneralNoteInput'
+        - type: object
+          required: [id, title, content]
+          properties:
+            id: { type: integer }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+    GeneralNoteSummary:
+      type: object
+      required: [id, title]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
     Activity:
       type: object
       required: [id, project_id, type, description, created_at]
@@ -1103,6 +1196,7 @@ components:
     TagEnvelope: { type: object, properties: { data: { $ref: '#/components/schemas/Tag' } } }
     ChecklistEnvelope: { type: object, properties: { data: { $ref: '#/components/schemas/ChecklistItem' } } }
     NoteEnvelope: { type: object, properties: { data: { $ref: '#/components/schemas/Note' } } }
+    GeneralNoteEnvelope: { type: object, properties: { data: { $ref: '#/components/schemas/GeneralNote' } } }
     ProjectCollectionEnvelope:
       type: object
       properties:
@@ -1129,6 +1223,12 @@ components:
       type: object
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/NoteSummary' } }
+        links: { $ref: '#/components/schemas/PaginationLinks' }
+        meta: { $ref: '#/components/schemas/PaginationMeta' }
+    GeneralNoteCollectionEnvelope:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/GeneralNoteSummary' } }
         links: { $ref: '#/components/schemas/PaginationLinks' }
         meta: { $ref: '#/components/schemas/PaginationMeta' }
     ActivityCollectionEnvelope:
