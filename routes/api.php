@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BoardController;
 use App\Http\Controllers\Api\ChecklistItemController;
 use App\Http\Controllers\Api\ChecklistReorderController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\GeneralNoteController;
 use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ProjectNoteController;
@@ -43,6 +44,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function (): void {
         Route::get('/project-statuses', 'projectStatuses')->name('project-statuses');
     });
     Route::apiResource('tags', TagController::class)->except(['show']);
+    Route::apiResource('notes', GeneralNoteController::class);
     Route::apiResource('projects', ProjectController::class);
     Route::get('/projects/{project}/activities', ActivityController::class)
         ->middleware('throttle:expensive-read')

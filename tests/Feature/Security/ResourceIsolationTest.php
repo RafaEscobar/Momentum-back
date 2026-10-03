@@ -3,6 +3,7 @@
 use App\Enums\SprintStatus;
 use App\Models\Activity;
 use App\Models\ChecklistItem;
+use App\Models\GeneralNote;
 use App\Models\Project;
 use App\Models\ProjectNote;
 use App\Models\Sprint;
@@ -11,6 +12,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Policies\ActivityPolicy;
 use App\Policies\ChecklistItemPolicy;
+use App\Policies\GeneralNotePolicy;
 use App\Policies\ProjectNotePolicy;
 use App\Policies\ProjectPolicy;
 use App\Policies\SprintPolicy;
@@ -79,6 +81,7 @@ it('registers an ownership policy for every user-owned resource', function () {
         Task::class => TaskPolicy::class,
         Sprint::class => SprintPolicy::class,
         ChecklistItem::class => ChecklistItemPolicy::class,
+        GeneralNote::class => GeneralNotePolicy::class,
         Tag::class => TagPolicy::class,
         ProjectNote::class => ProjectNotePolicy::class,
         Activity::class => ActivityPolicy::class,

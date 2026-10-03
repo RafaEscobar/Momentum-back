@@ -7,6 +7,7 @@ use App\Http\Resources\SprintSummaryResource;
 use App\Http\Resources\TaskSummaryResource;
 use App\Models\Activity;
 use App\Models\ChecklistItem;
+use App\Models\GeneralNote;
 use App\Models\Project;
 use App\Models\ProjectNote;
 use App\Models\Sprint;
@@ -73,6 +74,7 @@ it('cascades all owned data when a user is deleted', function () {
     $task = Task::factory()->for($project)->for($sprint)->create();
     $checklistItem = ChecklistItem::factory()->for($task)->create();
     $note = ProjectNote::factory()->for($project)->create();
+    $generalNote = GeneralNote::factory()->for($user)->create();
     $tag = Tag::factory()->for($user)->create();
     $task->tags()->attach($tag);
     $activity = Activity::factory()->for($user)->for($project)->create();
@@ -85,6 +87,7 @@ it('cascades all owned data when a user is deleted', function () {
     $this->assertDatabaseMissing('tasks', ['id' => $task->id]);
     $this->assertDatabaseMissing('checklist_items', ['id' => $checklistItem->id]);
     $this->assertDatabaseMissing('project_notes', ['id' => $note->id]);
+    $this->assertDatabaseMissing('general_notes', ['id' => $generalNote->id]);
     $this->assertDatabaseMissing('tags', ['id' => $tag->id]);
     $this->assertDatabaseMissing('activities', ['id' => $activity->id]);
     $this->assertDatabaseMissing('personal_access_tokens', ['id' => $tokenId]);
